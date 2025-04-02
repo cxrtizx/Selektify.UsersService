@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "PresentationLayer": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}
