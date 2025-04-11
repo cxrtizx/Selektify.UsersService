@@ -1,7 +1,7 @@
 ﻿using BusinessLogicLayer.ServiceContracts;
 using BusinessLogicLayer.Services;
+using BusinessLogicLayer.Stores;
 using Microsoft.Extensions.DependencyInjection;
-using System.Reflection;
 
 namespace BusinessLogicLayer
 {
@@ -11,6 +11,7 @@ namespace BusinessLogicLayer
         {
             services.AddScoped<ITestService, TestService>();
             services.AddScoped<ILoginService, LoginService>();
+            services.AddSingleton<IVerifierStore, VerifierStore>();
 
             return services;
         }

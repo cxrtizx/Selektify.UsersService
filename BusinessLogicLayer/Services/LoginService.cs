@@ -1,39 +1,60 @@
 ﻿using BusinessLogicLayer.ServiceContracts;
+using BusinessLogicLayer.Stores;
 using SpotifyAPI.Web;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace BusinessLogicLayer.Services
 {
-    public class LoginService : ILoginService
+    public class LoginService(IVerifierStore verifierStore) : ILoginService
     {
+        private readonly IVerifierStore _verifierStore = verifierStore;
+
         public Task Login()
         {
             var (verifier, challenge) = PKCEUtil.GenerateCodes();
-            var loginRequest = new LoginRequest(new Uri("http://localhost:3001"), "e35e4e5b07854970bb1f944055f0643e", LoginRequest.ResponseType.Code)
+            var state = Guid.NewGuid().ToString();
+            _verifierStore.StoreVerifier(state, verifier);
+
+            var loginRequest = new LoginRequest(
+                new Uri("http://localhost:3001/api/login/callback"),
+                "e35e4e5b07854970bb1f944055f0643e",
+                LoginRequest.ResponseType.Code)
             {
+                State = state,
                 CodeChallengeMethod = "S256",
                 CodeChallenge = challenge,
                 Scope = [Scopes.PlaylistReadPrivate, Scopes.UserReadEmail]
             };
+
             var uri = loginRequest.ToUri();
+            OpenBrowser(uri.AbsoluteUri);
 
             return Task.CompletedTask;
-
-            //var initialResponse = new OAuthClient().RequestToken(new PKCETokenRequest("ClientId", code, new Uri("http://localhost:3001"), verifier));
-
-            //var spotify = new SpotifyClient(initialResponse.Result.AccessToken);
         }
 
-
-        //public async Task GetCallback(string code)
-        //{
-        //    var initialResponse = await new OAuthClient().RequestToken(new PKCETokenRequest("ClientId", code, new Uri("http://localhost:3001"), verifier));
-
-        //    var spotify = new SpotifyClient(initialResponse.AccessToken);
-        //}
+        private static void OpenBrowser(string url)
+        {
+            try
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    url = url.Replace("&", "^&");
+                    Process.Start(new ProcessStartInfo("cmd", $"/c start {url}"));
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    Process.Start("xdg-open", url);
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    Process.Start("open", url);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ArgumentException($"Failed to open browser: {ex.Message}", ex);
+            }
+        }
     }
 }
